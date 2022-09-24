@@ -9,6 +9,7 @@ const manejadorDatos = ManejadorDatos.getInstancia();
 const getGlobalState = async () => {
   const openSessions = await manejadorDatos.openSessions();
   globalState = openSessions;
+  console.log(globalState)
 };
 
 const main = async () => {
