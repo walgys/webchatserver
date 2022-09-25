@@ -203,6 +203,6 @@ const main = async () => {
 };
 
 main().catch((err) => console.log(err)).finally(main());
-
-server.listen(9000);
-console.log('started server on port 9000');
+const port = process.env.PORT || 9000
+server.listen(port);
+console.log(`started server on port ${port}`);
