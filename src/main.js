@@ -5,15 +5,15 @@ let socketUserRoomMap = {};
 
 const server = require('http').createServer();
 const manejadorDatos = ManejadorDatos.getInstancia();
-
+const port = process.env.PORT || 9000;
 const getGlobalState = async () => {
   const openSessions = await manejadorDatos.openSessions();
   globalState = openSessions;
-  console.log(globalState)
 };
 
 const main = async () => {
   await getGlobalState();
+
   const socket = require('socket.io')(server, {
     cors: {
       origin: '*',
@@ -22,10 +22,9 @@ const main = async () => {
   });
 
   const reportToAllInRoom = async (session,topic,message) => {
-    try{
-      const sockets = await socket.fetchSockets();
-      session.users.forEach(async (user) => {
-        const clientSocket =
+    const sockets = await socket.fetchSockets();
+    session.users.forEach(async (user) => {
+      const clientSocket =
         Object.entries(socketUserRoomMap).find(
           ([keys, socketFromMap]) =>
             socketFromMap.userId !== undefined &&
@@ -34,15 +33,11 @@ const main = async () => {
       if (!!clientSocket) {
         const client = sockets.find(
           (socketsClientSocket) => socketsClientSocket.id === clientSocket[0]
-          );
-          //seguir aca
-          client.emit(topic, JSON.stringify(message));
-        }
-      });
-    }catch(err){
-      console.log(err)
-    }
-      
+        );
+        //seguir aca
+        client.emit(topic, JSON.stringify(message));
+      }
+    });
   };
 
   socket.on('connection', (client) => {
@@ -52,36 +47,23 @@ const main = async () => {
     client.emit('sync');
 
     client.on('mensaje', (datos) => {
-      try{
-        const objetoDatos = JSON.parse(datos);
-        client.emit('respuesta', {});
-      }catch(err){
-        console.log(err)
-      }
+      const objetoDatos = JSON.parse(datos);
+      client.emit('respuesta', {});
     });
 
     client.on('openSessions', async () => {
-      try{
       const openSessions = await manejadorDatos.openSessions();
       client.emit('openSessions', JSON.stringify(openSessions));
-    }catch(err){
-      console.log(err)
-    }
     });
 
     client.on('createChatroom', async (data) => {
-      try{
       const { name, user } = JSON.parse(data);
       await manejadorDatos.createChatRoom(name,user);
       const openSessions = await manejadorDatos.openSessions();
       client.emit('openSessions', JSON.stringify(openSessions));
-    }catch(err){
-      console.log(err)
-    }
     });
 
     client.on('sync', async (data) => {
-      try{
       const { chatRoomId, user } = JSON.parse(data);
       if (chatRoomId && user) {
         socketUserRoomMap[client.id] = {
@@ -91,13 +73,9 @@ const main = async () => {
         };
       }
       console.log(socketUserRoomMap)
-    }catch(err){
-      console.log(err)
-    }
     });
 
     client.on('enterChatRoom', async (data) => {
-      try{
       const { chatRoomId, user } = JSON.parse(data);
       if (chatRoomId && user) {
         socketUserRoomMap[client.id] = {
@@ -113,13 +91,9 @@ const main = async () => {
           client.emit('enterChatRoom', JSON.stringify(session));
         }
       }
-    }catch(err){
-      console.log(err)
-    }
     });
 
     client.on('sendMessage', async (data) => {
-      try{
       const { chatRoomId, message, user } = JSON.parse(data);
       if (chatRoomId && user && message) {
         socketUserRoomMap[client.id] = {
@@ -139,13 +113,9 @@ const main = async () => {
           reportToAllInRoom(session, 'reportNewMessageToAllInRoom',session);
         }
       }
-    }catch(err){
-      console.log(err)
-    }
     });
 
     client.on('exitChatRoom', async (data) => {
-      try{
       const { chatRoomId, user } = JSON.parse(data);
       if (chatRoomId && user) {
         socketUserRoomMap[client.id] = {
@@ -159,16 +129,12 @@ const main = async () => {
         globalState = globalState.map((stateSession) =>
           stateSession.id === session.id ? session : stateSession
         );
-        
+
         delete socketUserRoomMap[client.id];
     }
-  }catch(err){
-    console.log(err)
-  }
     })
 
     client.on('closeChatRoom', async (data) => {
-      try{
       const { chatRoomId, user } = JSON.parse(data);
       if (chatRoomId && user) {
         const session = await manejadorDatos.closeChatRoom(chatRoomId, user.uid);
@@ -177,9 +143,6 @@ const main = async () => {
         );
         reportToAllInRoom(session, 'closeChatRoom', {});
     }
-  }catch(err){
-    console.log(err)
-  }
     })
 
     client.on('disconnect', async () => {
@@ -202,7 +165,7 @@ const main = async () => {
   });
 };
 
-main().catch((err) => console.log(err)).finally(main());
-const port = process.env.PORT || 9000
+main().catch((err) => console.log(err));
+
 server.listen(port);
 console.log(`started server on port ${port}`);
